@@ -52,7 +52,7 @@ def _matches_keywords(text: str, keywords: list) -> bool:
     text_lower = text.lower()
     return any(kw.lower() in text_lower for kw in keywords)
 
-def fetch_news(category: str, limit: int = 10) -> list:
+def fetch_news(category: str, limit: int = 30) -> list:
     """指定カテゴリのRSSを取得してニュースリストを返す"""
     feeds = RSS_FEEDS.get(category, [])
     items = []
@@ -60,7 +60,7 @@ def fetch_news(category: str, limit: int = 10) -> list:
     for feed_info in feeds:
         try:
             parsed = feedparser.parse(feed_info["url"])
-            for entry in parsed.entries[:5]:
+            for entry in parsed.entries[:15]:
                 title   = entry.get("title", "").strip()
                 summary = entry.get("summary", entry.get("description", "")).strip()
                 url     = entry.get("link", "")
