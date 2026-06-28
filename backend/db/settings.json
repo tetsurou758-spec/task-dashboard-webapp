@@ -1,0 +1,11 @@
+{
+  "tools": [
+    "outlook"
+  ],
+  "keywords": [
+    "test"
+  ],
+  "sync_interval_minutes": 5,
+  "outlook_days_back": 365,
+  "outlook_max_items": 100
+}

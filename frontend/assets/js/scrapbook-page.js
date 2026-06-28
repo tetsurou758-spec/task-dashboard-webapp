@@ -1,0 +1,252 @@
+// スクラップブック画面ロジック
+let currentCat = 'all';
+
+const CAT_LABELS = {
+  all:       '📋 すべて',
+  insurance: '🏢 保険',
+  ai:        '🤖 AI',
+  itconsult: '💼 ITコンサル',
+  general:   '📰 一般',
+};
+
+function formatDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
+}
+
+function formatSavedAt(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return `保存: ${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+function openSource(url) {
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+// テキストを安全にHTMLエスケープ
+function esc(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ===== カードHTML生成 =====
+function scrapCardHTML(s, idx) {
+  const hasHtml = !!s.html_path;
+  const hasText = !!(s.text_content && s.text_content.trim().length > 0);
+
+  // アコーディオン本文エリア
+  const ERROR_LABELS = {
+    gnews:    '📰 Google News経由の記事はURL暗号化のため本文自動取得不可です（下記RSS概要をご覧ください）',
+    blocked:  '⛔ サーバー側でアクセスがブロックされています',
+    paywall:  '🔒 有料会員限定の記事です（ログインが必要）',
+    timeout:  '⏱ 接続タイムアウト（サイトが重いか、アクセス拒否）',
+    short:    '📄 本文が短すぎるため取得できませんでした',
+    empty:    '📄 本文を取得できませんでした（JS描画ページの可能性）',
+    error:    '⚠️ 取得中にエラーが発生しました',
+  };
+
+  let bodyContent;
+  if (hasText) {
+    const lines   = s.text_content.split('\n').filter(l => l.trim());
+    const preview = lines.slice(0, 8).map(esc).join('\n');
+    const full    = lines.map(esc).join('\n');
+    const hasMore = lines.length > 8;
+    bodyContent = `
+      <div class="acc-text-preview" id="acc-preview-${idx}">${preview}${hasMore ? '\n…' : ''}</div>
+      ${hasMore ? `<div class="acc-text-full" id="acc-full-${idx}" hidden>${full}</div>` : ''}
+      <div class="acc-text-footer">
+        ${hasMore ? `<button class="acc-toggle-btn" data-idx="${idx}">▼ 全文を表示（${lines.length}行）</button>` : ''}
+        <span class="acc-text-len">${s.text_content.length.toLocaleString()} 文字</span>
+      </div>`;
+  } else if (s.text_fetch_error === 'gnews') {
+    // Google News経由：エラーではなく仕様案内＋RSSリード文＋ブラウザリンク
+    const summaryHtml = s.summary ? `
+      <div class="acc-text-summary" style="margin-top:0; border-left-color:#5b8dee; background:#eef2ff;">
+        <span class="acc-summary-label" style="color:#5b8dee;">📰 RSSリード文</span>
+        ${esc(s.summary)}
+      </div>` : '';
+    bodyContent = `
+      <div class="acc-text-gnews">
+        <span>📰 Google News経由の記事です。全文はブラウザでご覧ください。</span>
+        ${summaryHtml}
+        <button class="acc-gnews-browser-btn" data-open-url="${esc(s.url)}">🌐 ブラウザで全文を読む</button>
+      </div>`;
+  } else {
+    const errLabel = ERROR_LABELS[s.text_fetch_error] || ERROR_LABELS['error'];
+    // RSSリード文があればフォールバック表示
+    const fallback = s.summary ? `
+      <div class="acc-text-summary">
+        <span class="acc-summary-label">📰 RSSリード文</span>
+        ${esc(s.summary)}
+      </div>` : '';
+    bodyContent = `
+      <div class="acc-text-empty">${errLabel}</div>
+      ${fallback}
+      ${!s.text_fetch_error ? '<div class="acc-text-hint">☆を外して再度クリックで再試行</div>' : ''}`;
+  }
+
+  return `
+    <div class="scrap-card" id="scrap-card-${idx}">
+
+      <!-- ヘッダー行 -->
+      <div class="scrap-card-header">
+        <span class="scrap-cat-badge">${CAT_LABELS[s.category] || s.category}</span>
+        <span class="scrap-saved-at">${formatSavedAt(s.saved_at)}</span>
+        <div class="scrap-card-actions">
+          <button class="scrap-remove-btn scrap-open-btn" data-open-url="${esc(s.url)}" title="ブラウザで元記事を開く">🌐 ブラウザで開く</button>
+          <button class="scrap-remove-btn" data-remove-url="${esc(s.url)}" title="スクラップ解除">★ 解除</button>
+        </div>
+      </div>
+
+      <!-- タイトル（クリックで元記事を開く） -->
+      <div class="scrap-card-title" data-open-url="${esc(s.url)}" title="元記事を開く">
+        ${esc(s.title)}
+      </div>
+      <div class="scrap-card-meta">${esc(s.source)} · ${formatDate(s.published_at)}</div>
+
+      <!-- アコーディオントリガー -->
+      <button class="acc-trigger" data-acc="${idx}" aria-expanded="false">
+        ▶ 本文を見る
+        ${hasText ? '' : ' <span class="acc-trigger-warn">（未取得）</span>'}
+      </button>
+
+      <!-- アコーディオン本文（デフォルト非表示） -->
+      <div class="acc-body" id="acc-body-${idx}" hidden>
+        ${bodyContent}
+      </div>
+
+    </div>
+  `;
+}
+
+// ===== 描画メイン =====
+function renderScraps() {
+  const all = window.scrapbook.getScraps();
+  const filtered = currentCat === 'all' ? all : all.filter(s => s.category === currentCat);
+  filtered.sort((a, b) => new Date(b.saved_at) - new Date(a.saved_at));
+
+  document.getElementById('scrap-count').textContent = `${filtered.length} 件保存済み`;
+
+  const list = document.getElementById('scrap-list');
+  if (filtered.length === 0) {
+    list.innerHTML = `
+      <div class="empty-message">
+        <span class="empty-icon">📌</span>
+        ニュース記事の ☆ をクリックすると<br>ここに保存されます
+      </div>`;
+    return;
+  }
+
+  let globalIdx = 0;
+  if (currentCat === 'all') {
+    const groups = {};
+    filtered.forEach(s => {
+      const cat = s.category || 'general';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(s);
+    });
+    list.innerHTML = Object.entries(groups).map(([cat, items]) => `
+      <div class="scrap-group">
+        <div class="scrap-group-header">${CAT_LABELS[cat] || cat}</div>
+        ${items.map(s => scrapCardHTML(s, globalIdx++)).join('')}
+      </div>
+    `).join('');
+  } else {
+    list.innerHTML = filtered.map(s => scrapCardHTML(s, globalIdx++)).join('');
+  }
+
+  bindEvents(list);
+}
+
+// ===== イベントバインド =====
+function bindEvents(list) {
+  // ★ 解除
+  list.querySelectorAll('[data-remove-url]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      if (btn.classList.contains('scrap-open-btn')) {
+        openSource(btn.dataset.openUrl || btn.dataset.removeUrl);
+        return;
+      }
+      window.scrapbook.removeScrap(btn.dataset.removeUrl);
+      renderScraps();
+    });
+  });
+
+  // タイトルクリックで元記事を開く
+  list.querySelectorAll('[data-open-url]').forEach(el => {
+    el.addEventListener('click', () => openSource(el.dataset.openUrl));
+  });
+
+  // Google News「ブラウザで全文を読む」ボタン
+  list.querySelectorAll('.acc-gnews-browser-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      openSource(btn.dataset.openUrl);
+    });
+  });
+
+  // アコーディオントリガー
+  list.querySelectorAll('.acc-trigger').forEach(trigger => {
+    trigger.addEventListener('click', e => {
+      e.stopPropagation();
+      const idx  = trigger.dataset.acc;
+      const body = document.getElementById(`acc-body-${idx}`);
+      const open = !body.hidden;
+      body.hidden = open;
+      trigger.setAttribute('aria-expanded', !open);
+      trigger.textContent = open
+        ? '▶ 本文を見る'
+        : '▼ 本文を閉じる';
+      // 未取得ラベルを再付与
+      const item = window.scrapbook.getScraps().find((_, i) => String(i) === idx);
+    });
+  });
+
+  // 全文展開トグル
+  list.querySelectorAll('.acc-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const idx     = btn.dataset.idx;
+      const preview = document.getElementById(`acc-preview-${idx}`);
+      const full    = document.getElementById(`acc-full-${idx}`);
+      const expanded = !full.hidden;
+      full.hidden    = expanded;
+      preview.hidden = !expanded;
+      btn.textContent = expanded
+        ? `▼ 全文を表示（${full ? full.textContent.split('\n').length : ''}行）`
+        : '▲ 折りたたむ';
+    });
+  });
+}
+
+// ===== タブ切り替え =====
+document.getElementById('scrap-tabs').addEventListener('click', e => {
+  const tab = e.target.closest('.scrap-tab');
+  if (!tab) return;
+  document.querySelectorAll('.scrap-tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  currentCat = tab.dataset.cat;
+  renderScraps();
+});
+
+// ===== すべて削除 =====
+document.getElementById('btn-clear-all').addEventListener('click', () => {
+  const all = window.scrapbook.getScraps();
+  const filtered = currentCat === 'all' ? all : all.filter(s => s.category === currentCat);
+  if (filtered.length === 0) return;
+  const label = currentCat === 'all' ? 'すべて' : CAT_LABELS[currentCat];
+  if (!confirm(`「${label}」の ${filtered.length} 件を削除しますか？`)) return;
+
+  if (currentCat === 'all') {
+    localStorage.removeItem('task_dashbord_scraps');
+  } else {
+    const remaining = all.filter(s => s.category !== currentCat);
+    localStorage.setItem('task_dashbord_scraps', JSON.stringify(remaining));
+  }
+  renderScraps();
+});
+
+// 初期描画
+renderScraps();

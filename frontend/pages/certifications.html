@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>資格対策 - Task Dashbord</title>
+  <link rel="stylesheet" href="../assets/css/main.css">
+  <style>
+    /* ===== 資格対策ページ専用スタイル ===== */
+    .cert-layout { max-width: 960px; margin: 0 auto; padding: 24px; }
+
+    /* タブ */
+    .cert-tabs {
+      display: flex; gap: 8px; flex-wrap: wrap;
+      border-bottom: 2px solid var(--border); margin-bottom: 24px;
+    }
+    .cert-tab {
+      padding: 10px 18px; border: none; background: transparent;
+      font-size: 0.95rem; font-weight: 600; color: var(--text-muted);
+      cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px;
+      transition: all .15s;
+    }
+    .cert-tab:hover { color: var(--text); }
+    .cert-tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+
+    /* 試験日程エリア */
+    .cert-schedule {
+      display: flex; gap: 24px; flex-wrap: wrap;
+      background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px;
+      padding: 24px; margin-bottom: 24px;
+    }
+    .cert-schedule-item { flex: 1; min-width: 200px; }
+    .cert-schedule-label { font-size: 0.85rem; color: #3b82f6; font-weight: 600; margin-bottom: 6px; }
+    .cert-schedule-date { font-size: 1.8rem; font-weight: 800; color: #1e3a8a; line-height: 1.2; }
+    .cert-note { font-size: 0.85rem; color: var(--text-muted); margin-top: 8px; }
+    .cert-official-link { display: inline-block; margin-top: 12px; font-size: 0.85rem; color: #3b82f6; cursor: pointer; }
+    .cert-scraped { font-size: 0.78rem; color: var(--text-muted); margin-top: 8px; }
+
+    /* 学習ツールバー */
+    .cert-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+    .cert-search {
+      flex: 1; min-width: 220px; padding: 10px 14px; font-size: 0.9rem;
+      border: 1px solid var(--border); border-radius: 8px; background: var(--card-bg); color: var(--text);
+    }
+    .cert-search:focus { outline: none; border-color: #3b82f6; }
+    .cert-tool-btn {
+      padding: 10px 14px; font-size: 0.85rem; font-weight: 600; white-space: nowrap;
+      border: 1px solid var(--border); border-radius: 8px; background: var(--card-bg);
+      color: var(--text); cursor: pointer; transition: all .15s;
+    }
+    .cert-tool-btn:hover { border-color: #3b82f6; color: #3b82f6; }
+    .cert-tool-btn.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+
+    /* 統計バー */
+    .cert-stats {
+      font-size: 0.85rem; color: var(--text); background: #f8fafc;
+      border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 16px;
+    }
+    .cert-stats b { color: #3b82f6; }
+    .cert-stats-reset { color: var(--text-muted); cursor: pointer; margin-left: 8px; font-size: 0.78rem; }
+    .cert-stats-reset:hover { color: #ef4444; text-decoration: underline; }
+
+    /* 苦手スター */
+    .cert-q-star { cursor: pointer; font-size: 1.1rem; flex-shrink: 0; color: #f59e0b; }
+    .cert-q-text { flex: 1; }
+
+    /* クイズ4択 */
+    .cert-quiz-item { border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 14px; background: var(--card-bg); }
+    .cert-quiz-q { font-weight: 700; margin-bottom: 12px; }
+    .cert-choices { display: flex; flex-direction: column; gap: 8px; }
+    .cert-choice {
+      text-align: left; padding: 10px 14px; border: 1px solid var(--border);
+      border-radius: 8px; background: var(--card-bg); color: var(--text); cursor: pointer;
+      font-size: 0.9rem; transition: all .12s;
+    }
+    .cert-choice:hover:not(:disabled) { border-color: #3b82f6; background: #eff6ff; }
+    .cert-choice:disabled { cursor: default; }
+    .cert-choice.correct { background: #f0fdf4; border-color: #16a34a; color: #15803d; font-weight: 600; }
+    .cert-choice.wrong { background: #fef2f2; border-color: #ef4444; color: #b91c1c; }
+    .cert-quiz-result { margin-top: 10px; font-weight: 700; }
+    .cert-quiz-result.ok { color: #16a34a; }
+    .cert-quiz-result.ng { color: #ef4444; }
+    .cert-quiz-answer { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); font-size: 0.9rem; }
+
+    /* 問題アコーディオン */
+    .cert-questions-title { font-size: 1.1rem; font-weight: 700; margin: 0 0 16px; }
+    .cert-q-item { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 12px; overflow: hidden; }
+    .cert-q-head {
+      padding: 16px; cursor: pointer; font-weight: 600; background: var(--card-bg);
+      display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    }
+    .cert-q-head:hover { background: #f8fafc; }
+    .cert-q-toggle { color: #3b82f6; font-size: 0.85rem; white-space: nowrap; }
+    .cert-q-answer {
+      padding: 0 16px; max-height: 0; overflow: hidden;
+      background: #f0fdf4; border-top: 1px solid transparent;
+      transition: max-height .2s, padding .2s;
+    }
+    .cert-q-item.open .cert-q-answer { max-height: 400px; padding: 16px; border-top-color: #bbf7d0; }
+    .cert-q-answer-label { font-size: 0.8rem; color: #16a34a; font-weight: 700; margin-bottom: 6px; }
+    .cert-q-ref { margin-top: 10px; padding-top: 8px; border-top: 1px dashed #bbf7d0; }
+    .cert-q-ref-link { font-size: 0.82rem; color: #3b82f6; cursor: pointer; }
+    .cert-q-ref-link:hover { text-decoration: underline; }
+
+    .cert-loading { text-align: center; padding: 40px; color: var(--text-muted); }
+  </style>
+</head>
+<body class="settings-page">
+
+  <header class="app-header">
+    <div class="header-left">
+      <button class="btn-icon-label" onclick="location.href='/'">
+        <span>← 戻る</span>
+      </button>
+    </div>
+    <div class="header-center">
+      <span class="app-title">🎓 資格対策</span>
+    </div>
+    <div class="header-right">
+      <button id="btn-refresh" class="btn-icon-label" title="最新情報を取得">
+        <span class="btn-icon">🔄</span><span>更新</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="cert-layout">
+    <!-- タブ -->
+    <div id="cert-tabs" class="cert-tabs"></div>
+
+    <!-- 試験日程 -->
+    <div id="cert-content">
+      <div class="cert-loading">読み込み中...</div>
+    </div>
+  </div>
+
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/certifications.js"></script>
+</body>
+</html>

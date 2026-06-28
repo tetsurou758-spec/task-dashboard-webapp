@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>設定 - Task Dashbord</title>
+  <link rel="stylesheet" href="../assets/css/main.css">
+</head>
+<body class="settings-page">
+
+  <header class="app-header">
+    <div class="header-left">
+      <button class="btn-icon-label" onclick="location.href='/'">
+        <span>← 戻る</span>
+      </button>
+    </div>
+    <div class="header-center">
+      <span class="app-title">⚙️ 設定</span>
+    </div>
+    <div class="header-right">
+      <button id="btn-certifications" class="btn-icon-label" title="資格対策" onclick="location.href='/certifications'">
+        <span class="btn-icon">🎓</span><span>資格対策</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="settings-layout">
+
+    <!-- 使用ツール -->
+    <section class="settings-section">
+      <h3>🔌 使用ツール</h3>
+      <div class="tool-checks">
+        <label class="tool-check-item"><input type="checkbox" name="tool" value="outlook" checked> 📧 Outlook</label>
+        <label class="tool-check-item"><input type="checkbox" name="tool" value="teams" checked> 💬 Teams</label>
+        <label class="tool-check-item"><input type="checkbox" name="tool" value="slack" checked> 🟢 Slack</label>
+      </div>
+    </section>
+
+    <!-- Outlook取得設定 -->
+    <section class="settings-section">
+      <h3>📧 Outlook 取得設定</h3>
+      <div class="form-row">
+        <label class="form-label">メール取得期間</label>
+        <select id="outlook-days-back" class="form-input" style="width:auto">
+          <option value="7">過去7日間</option>
+          <option value="14">過去14日間</option>
+          <option value="30">過去30日間</option>
+          <option value="90" selected>過去90日間</option>
+          <option value="180">過去180日間</option>
+          <option value="365">過去1年間</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label class="form-label">最大取得件数</label>
+        <select id="outlook-max-items" class="form-input" style="width:auto">
+          <option value="20">20件</option>
+          <option value="50" selected>50件</option>
+          <option value="100">100件</option>
+          <option value="200">200件</option>
+        </select>
+      </div>
+      <p class="form-note">※ Outlookがインストール・起動済みの場合に有効</p>
+    <!-- タスク抽出条件グループ -->
+    <section class="settings-section">
+      <h3 style="border-bottom: 2px solid var(--border); padding-bottom: 12px; margin-bottom: 24px;">🤖 タスク抽出の条件設定</h3>
+
+      <!-- 宛先Toの確認 -->
+      <div style="margin-bottom: 28px;">
+        <h4 style="font-size: 1.05rem; color: var(--text); margin: 0 0 8px 0;">📧 宛先 (To) の確認</h4>
+        <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" id="check-to-only" style="width: 16px; height: 16px;">
+          <span style="font-size: 0.9rem; color: var(--text-muted);">自分が「To (宛先)」に含まれているメールのみを対象にする（CCやメーリングリスト宛を除外）</span>
+        </label>
+      </div>
+
+      <!-- 宛先・メンションキーワード -->
+      <div style="margin-bottom: 24px;">
+        <h4 style="font-size: 1.05rem; color: var(--text); margin: 0 0 4px 0;">👤 宛先・メンションキーワード</h4>
+        <p class="settings-desc" style="margin-bottom: 12px;">直近のメール本文に自分やチーム名が含まれているかをチェックします</p>
+        <div id="mention-area" class="keyword-area"></div>
+        <div class="keyword-input-row">
+          <input type="text" id="new-mention" class="form-input" placeholder="キーワードを追加（例：自分、テツロウ、チーム名）">
+          <button id="btn-add-mention" class="btn-add">＋ 追加</button>
+        </div>
+      </div>
+
+      <!-- AND / OR 条件の区切りブロック -->
+      <div style="margin: 32px auto; text-align: center;">
+        <div style="display: inline-flex; background: #3b82f6; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(59,130,246,0.3);">
+          <label style="cursor: pointer; padding: 14px 48px; display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 1.3rem; color: #ffffff; border-right: 2px solid rgba(255,255,255,0.2); transition: background 0.2s;">
+            <input type="radio" name="keyword_condition" value="OR" style="width: 22px; height: 22px; cursor: pointer; accent-color: #1e3a8a;"> 
+            OR
+          </label>
+          <label style="cursor: pointer; padding: 14px 48px; display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 1.3rem; color: #ffffff; transition: background 0.2s;">
+            <input type="radio" name="keyword_condition" value="AND" style="width: 22px; height: 22px; cursor: pointer; accent-color: #1e3a8a;"> 
+            AND
+          </label>
+        </div>
+      </div>
+
+      <!-- 依頼キーワード -->
+      <div style="margin-bottom: 8px;">
+        <h4 style="font-size: 1.05rem; color: var(--text); margin: 0 0 4px 0;">🔍 依頼キーワード</h4>
+        <p class="settings-desc" style="margin-bottom: 12px;">タスクとみなすための依頼ワード</p>
+        <div id="keyword-area" class="keyword-area"></div>
+        <div class="keyword-input-row">
+          <input type="text" id="new-keyword" class="form-input" placeholder="キーワードを追加（例：ご対応）">
+          <button id="btn-add-keyword" class="btn-add">＋ 追加</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 同期間隔 -->
+    <section class="settings-section">
+      <h3>⏱️ 同期間隔</h3>
+      <div class="form-row">
+        <label class="form-label">自動同期の間隔</label>
+        <select id="sync-interval" class="form-input" style="width:auto">
+          <option value="1">1分ごと</option>
+          <option value="3">3分ごと</option>
+          <option value="5" selected>5分ごと</option>
+          <option value="10">10分ごと</option>
+          <option value="30">30分ごと</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- 保存ボタン -->
+    <div class="save-bar">
+      <button id="btn-save" class="btn-save">💾 設定を保存</button>
+    </div>
+
+  </div>
+
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/settings.js"></script>
+</body>
+</html>
